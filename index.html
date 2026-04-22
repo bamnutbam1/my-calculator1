@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>เครื่องคิดเลข</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --bg:#f0f2f6;
+  --surface:#fff;
+  --surface2:#f4f6fa;
+  --surface3:#e8ecf4;
+  --border:rgba(0,0,0,0.09);
+  --border2:rgba(0,0,0,0.15);
+  --text:#1a1c22;
+  --text2:#5a6278;
+  --text3:#9aa0b8;
+  --blue:#185FA5;
+  --blue-l:#d6e8f7;
+  --blue-t:#185FA5;
+  --red-l:#fde8e8;
+  --red-t:#A32D2D;
+  --amber-l:#fff3dc;
+  --amber-t:#854F0B;
+  --green-l:#e4f5ea;
+  --green-t:#1a6e3a;
+  --disp-bg:#1a2740;
+  --disp-text:#e8f0fb;
+  --disp-sub:#7a9cc0;
+  --mem-bg:#f5f0ff;
+  --mem-border:#c4b0f0;
+  --mem-text:#5030a0;
+  --radius:20px;
+  --rbtn:14px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1117;--surface:#1c1f28;--surface2:#242835;--surface3:#2c3040;
+    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+    --text:#e4e8f4;--text2:#7a84a0;--text3:#454d62;
+    --blue-l:#1a3050;--blue-t:#7ab8f0;
+    --red-l:#2e1515;--red-t:#f09595;
+    --amber-l:#2a1e08;--amber-t:#EF9F27;
+    --green-l:#0d2a18;--green-t:#5acc88;
+    --mem-bg:#1e1630;--mem-border:#6040c0;--mem-text:#b090f0;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  min-height:100dvh;
+  padding:16px 12px 40px;
+}
+h1.app-title{
+  text-align:center;font-size:15px;font-weight:500;
+  color:var(--text3);margin-bottom:14px;letter-spacing:.03em;
+}
+#layout{
+  display:grid;
+  grid-template-columns:1fr 300px;
+  gap:12px;
+  max-width:720px;
+  margin:0 auto;
+}
+
+/* ── CALC SIDE ── */
+#calc-panel{
+  background:var(--surface);
+  border:0.5px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.display{
+  background:var(--disp-bg);
+  border-radius:16px;
+  padding:16px 16px 12px;
+  text-align:right;
+  min-height:100px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  position:relative;
+}
+.display-expr{font-size:12px;color:var(--disp-sub);min-height:16px;word-break:break-all;margin-bottom:3px;}
+.display-main{font-size:42px;font-weight:500;color:var(--disp-text);word-break:break-all;line-height:1.1;}
+.snap-btn{
+  position:absolute;top:10px;right:10px;
+  background:rgba(255,255,255,0.12);border:none;
+  color:rgba(255,255,255,0.7);border-radius:8px;
+  padding:5px 8px;font-size:13px;cursor:pointer;
+  transition:background .15s;
+}
+.snap-btn:hover{background:rgba(255,255,255,0.22);}
+
+/* memory bar */
+.mem-bar{
+  display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  min-height:34px;
+  background:var(--mem-bg);
+  border:0.5px dashed var(--mem-border);
+  border-radius:10px;padding:5px 8px;
+}
+.mem-label{font-size:11px;color:var(--mem-text);font-weight:500;white-space:nowrap;}
+.mem-chip{
+  background:var(--surface);
+  border:0.5px solid var(--mem-border);
+  border-radius:8px;
+  padding:3px 10px;
+  font-size:13px;font-weight:500;
+  color:var(--mem-text);
+  cursor:grab;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none;
+  display:flex;align-items:center;gap:5px;
+  transition:box-shadow .15s,transform .1s;
+}
+.mem-chip:hover{box-shadow:0 2px 8px rgba(80,48,160,.18);transform:translateY(-1px);}
+.mem-chip .del{font-size:10px;opacity:.5;cursor:pointer;padding:0 2px;}
+.mem-chip .del:hover{opacity:1;}
+.mem-empty{font-size:11px;color:var(--mem-text);opacity:.45;font-style:italic;}
+
+/* drop zone highlight */
+.display.dragover{outline:2px dashed var(--mem-border);outline-offset:-4px;}
+
+.btn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.btn{
+  border:none;border-radius:var(--rbtn);
+  font-size:21px;font-weight:500;height:62px;
+  cursor:pointer;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  user-select:none;transition:opacity .1s,transform .08s;
+}
+.btn:active{transform:scale(.92);opacity:.75;}
+.btn-num{background:var(--surface2);color:var(--text);}
+.btn-num:hover{background:var(--surface3);}
+.btn-op{background:var(--blue-l);color:var(--blue-t);}
+.btn-op.active{background:var(--blue);color:#fff;}
+.btn-eq{background:var(--blue);color:#fff;}
+.btn-eq:hover{opacity:.88;}
+.btn-ac{background:var(--red-l);color:var(--red-t);font-size:17px;}
+.btn-back{background:var(--amber-l);color:var(--amber-t);font-size:19px;}
+.btn-mem{background:var(--mem-bg);color:var(--mem-text);font-size:15px;border:0.5px dashed var(--mem-border);}
+.btn-mem:hover{opacity:.85;}
+.btn-zero{grid-column:span 2;}
+
+/* ── HISTORY SIDE ── */
+#hist-panel{
+  background:var(--surface);
+  border:0.5px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  max-height:560px;
+}
+.tabs{display:flex;gap:4px;margin-bottom:10px;overflow-x:auto;flex-shrink:0;padding-bottom:2px;}
+.tabs::-webkit-scrollbar{height:3px;}
+.tabs::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.tab{
+  background:none;border:0.5px solid var(--border2);
+  border-radius:8px;padding:5px 10px;
+  font-size:12px;font-weight:500;color:var(--text2);
+  cursor:pointer;white-space:nowrap;font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .12s,color .12s;
+  flex-shrink:0;
+}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.tab:not(.active):hover{background:var(--surface2);}
+.hist-clear{
+  font-size:11px;color:var(--red-t);background:var(--red-l);
+  border:none;cursor:pointer;padding:4px 9px;border-radius:7px;
+  font-family:inherit;flex-shrink:0;white-space:nowrap;
+}
+.hist-clear:hover{opacity:.85;}
+.hist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-shrink:0;gap:8px;}
+.hist-title{font-size:13px;font-weight:500;color:var(--text2);}
+.hist-list{
+  flex:1;overflow-y:auto;
+  display:flex;flex-direction:column;gap:6px;
+  padding-right:2px;
+}
+.hist-list::-webkit-scrollbar{width:3px;}
+.hist-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.h-item{
+  background:var(--surface2);border-radius:10px;
+  padding:9px 11px;cursor:pointer;
+  border:0.5px solid transparent;
+  transition:border-color .15s;
+}
+.h-item:hover{border-color:var(--blue);}
+.h-item:active{opacity:.75;}
+.h-expr{font-size:11px;color:var(--text2);word-break:break-all;}
+.h-result{font-size:16px;font-weight:500;color:var(--text);}
+.h-time{font-size:10px;color:var(--text3);margin-top:1px;}
+.h-empty{color:var(--text3);font-size:12px;text-align:center;margin-top:40px;line-height:1.9;}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1a2740;color:#e8f0fb;
+  padding:9px 18px;border-radius:10px;font-size:13px;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:999;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* mobile */
+@media(max-width:540px){
+  #layout{grid-template-columns:1fr;}
+  #hist-panel{max-height:280px;}
+  .btn{height:56px;font-size:19px;}
+  .display-main{font-size:36px;}
+}
+</style>
+</head>
+<body>
+<h1 class="app-title">เครื่องคิดเลข</h1>
+<div id="layout">
+
+  <!-- CALCULATOR -->
+  <div id="calc-panel">
+    <div class="display" id="displayEl"
+         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <button class="snap-btn" onclick="saveSnapshot()" title="บันทึกภาพ">📷</button>
+      <div class="display-expr" id="expr"></div>
+      <div class="display-main" id="main">0</div>
+    </div>
+
+    <!-- Memory bar -->
+    <div class="mem-bar" id="memBar">
+      <span class="mem-label">📌 พัก:</span>
+      <span class="mem-empty" id="memEmpty">ยังไม่มี — กด M+ เพื่อพักค่า</span>
+    </div>
+
+    <div class="btn-grid">
+      <button class="btn btn-ac"   onclick="clearAll()">AC</button>
+      <button class="btn btn-back" onclick="backspace()">⌫</button>
+      <button class="btn btn-mem"  onclick="memSave()">M+</button>
+      <button class="btn btn-op"   id="op-div" onclick="pressOp('/')">÷</button>
+
+      <button class="btn btn-num" onclick="pressNum('7')">7</button>
+      <button class="btn btn-num" onclick="pressNum('8')">8</button>
+      <button class="btn btn-num" onclick="pressNum('9')">9</button>
+      <button class="btn btn-op"  id="op-mul" onclick="pressOp('*')">×</button>
+
+      <button class="btn btn-num" onclick="pressNum('4')">4</button>
+      <button class="btn btn-num" onclick="pressNum('5')">5</button>
+      <button class="btn btn-num" onclick="pressNum('6')">6</button>
+      <button class="btn btn-op"  id="op-sub" onclick="pressOp('-')">−</button>
+
+      <button class="btn btn-num" onclick="pressNum('1')">1</button>
+      <button class="btn btn-num" onclick="pressNum('2')">2</button>
+      <button class="btn btn-num" onclick="pressNum('3')">3</button>
+      <button class="btn btn-op"  id="op-add" onclick="pressOp('+')">+</button>
+
+      <button class="btn btn-num btn-zero" onclick="pressNum('0')">0</button>
+      <button class="btn btn-num" onclick="pressDot()">.</button>
+      <button class="btn btn-eq"  onclick="calculate()">=</button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="hist-panel">
+    <div class="tabs" id="tabBar"></div>
+    <div class="hist-header">
+      <span class="hist-title" id="histTitle">วันนี้</span>
+      <button class="hist-clear" onclick="clearDay()">ล้างวันนี้</button>
+    </div>
+    <div class="hist-list" id="histList">
+      <p class="h-empty">ยังไม่มีประวัติ<br>ลองคำนวณดูสิ 🧮</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STATE ──
+let current='0', prev=null, operator=null, justCalc=false;
+let memSlots=[];
+let dragVal=null;
+
+const DAY_MS = 86400000;
+const STORAGE_KEY = 'calc_history_v2';
+const MEM_KEY = 'calc_mem_v1';
+
+// ── HISTORY STORAGE (7 days) ──
+function todayKey(){
+  const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||{}; }catch(e){ return {}; }
+}
+function saveHistory(h){ localStorage.setItem(STORAGE_KEY, JSON.stringify(h)); }
+function pruneOld(h){
+  const cutoff = Date.now() - 7*DAY_MS;
+  Object.keys(h).forEach(k => { if(new Date(k).getTime() < cutoff) delete h[k]; });
+  return h;
+}
+function addRecord(expr, result){
+  let h = pruneOld(loadHistory());
+  const k = todayKey();
+  if(!h[k]) h[k]=[];
+  const now=new Date();
+  h[k].unshift({ expr, result, t: now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0') });
+  if(h[k].length>200) h[k]=h[k].slice(0,200);
+  saveHistory(h);
+}
+
+// ── MEMORY SLOTS ──
+function loadMem(){
+  try{ return JSON.parse(localStorage.getItem(MEM_KEY))||[]; }catch(e){ return []; }
+}
+function saveMem(){ localStorage.setItem(MEM_KEY, JSON.stringify(memSlots)); }
+function memSave(){
+  if(current==='ข้อผิดพลาด') return;
+  const val = current;
+  if(memSlots.length>=8){ showToast('เต็มแล้ว! ลบก่อนนะครับ'); return; }
+  memSlots.push(val);
+  saveMem();
+  renderMem();
+  showToast('พักค่า '+val+' แล้ว ✓');
+}
+function memDelete(i){
+  memSlots.splice(i,1);
+  saveMem();
+  renderMem();
+}
+function renderMem(){
+  const bar = document.getElementById('memBar');
+  const empty = document.getElementById('memEmpty');
+  // remove old chips
+  bar.querySelectorAll('.mem-chip').forEach(c=>c.remove());
+  if(memSlots.length===0){
+    empty.style.display='';
+  } else {
+    empty.style.display='none';
+    memSlots.forEach((v,i)=>{
+      const chip = document.createElement('div');
+      chip.className='mem-chip';
+      chip.draggable=true;
+      chip.dataset.val=v;
+      chip.innerHTML=`${v}<span class="del" onclick="memDelete(${i})">✕</span>`;
+      // Desktop drag
+      chip.addEventListener('dragstart', e=>{
+        dragVal=v;
+        e.dataTransfer.setData('text/plain',v);
+        chip.style.opacity='.5';
+      });
+      chip.addEventListener('dragend', ()=>{ chip.style.opacity=''; });
+      // Touch drag (tap to insert)
+      chip.addEventListener('click', e=>{
+        if(e.target.classList.contains('del')) return;
+        insertMemVal(v);
+      });
+      bar.appendChild(chip);
+    });
+  }
+}
+function insertMemVal(v){
+  current = v;
+  justCalc = false;
+  updateDisplay();
+  showToast('ใส่ค่า '+v+' แล้ว ✓');
+}
+
+// Drop zone
+function onDragOver(e){
+  e.preventDefault();
+  document.getElementById('displayEl').classList.add('dragover');
+}
+function onDragLeave(){ document.getElementById('displayEl').classList.remove('dragover'); }
+function onDrop(e){
+  e.preventDefault();
+  document.getElementById('displayEl').classList.remove('dragover');
+  const v = e.dataTransfer.getData('text/plain') || dragVal;
+  if(v) insertMemVal(v);
+  dragVal=null;
+}
+
+// ── CALC LOGIC ──
+const mainEl=document.getElementById('main');
+const exprEl=document.getElementById('expr');
+const opIds={'+':'op-add','-':'op-sub','*':'op-mul','/':'op-div'};
+
+function setActiveOp(op){
+  Object.values(opIds).forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(op) document.getElementById(opIds[op]).classList.add('active');
+}
+function updateDisplay(){
+  let d=current;
+  if(d!=='ข้อผิดพลาด'&&d.length>13) d=parseFloat(d).toExponential(4);
+  mainEl.textContent=d;
+}
+function pressNum(n){
+  if(justCalc){current=n;justCalc=false;setActiveOp(null);}
+  else if(current==='0') current=n;
+  else if(current.length<14) current+=n;
+  updateDisplay();
+}
+function pressDot(){
+  if(justCalc){current='0.';justCalc=false;setActiveOp(null);return;}
+  if(!current.includes('.')) current+='.';
+  updateDisplay();
+}
+function backspace(){
+  if(justCalc||current==='ข้อผิดพลาด'){current='0';justCalc=false;setActiveOp(null);}
+  else current=current.length>1?current.slice(0,-1):'0';
+  updateDisplay();
+}
+function pressOp(op){
+  if(operator&&!justCalc) computeInter();
+  prev=parseFloat(current);operator=op;justCalc=true;
+  const sym={'+':'+','-':'−','*':'×','/':'÷'}[op];
+  exprEl.textContent=prev+' '+sym;
+  setActiveOp(op);
+}
+function computeInter(){
+  if(prev===null||operator===null) return;
+  const a=prev,b=parseFloat(current);
+  let r;
+  if(operator==='+') r=a+b;
+  else if(operator==='-') r=a-b;
+  else if(operator==='*') r=a*b;
+  else r=b===0?'ข้อผิดพลาด':a/b;
+  current=typeof r==='number'?parseFloat(r.toPrecision(12)).toString():r;
+  prev=typeof r==='number'?r:null;
+}
+function calculate(){
+  if(operator===null||prev===null) return;
+  const a=prev,b=parseFloat(current);
+  const sym={'+':'+','-':'−','*':'×','/':'÷'}[operator];
+  const expr=a+' '+sym+' '+b;
+  computeInter();
+  const result=current;
+  exprEl.textContent=expr+' =';
+  justCalc=true;setActiveOp(null);
+  operator=null;prev=null;
+  addRecord(expr,result);
+  renderTabs();
+  updateDisplay();
+}
+function clearAll(){
+  current='0';prev=null;operator=null;justCalc=false;
+  exprEl.textContent='';setActiveOp(null);updateDisplay();
+}
+
+// ── TABS & RENDER ──
+let activeTab = todayKey();
+
+function getDayLabel(key){
+  const today=todayKey();
+  const yest=new Date(Date.now()-DAY_MS);
+  const yKey=`${yest.getFullYear()}-${yest.getMonth()+1}-${yest.getDate()}`;
+  if(key===today) return 'วันนี้';
+  if(key===yKey) return 'เมื่อวาน';
+  const [y,m,d]=key.split('-');
+  return `${d}/${m}`;
+}
+
+function renderTabs(){
+  const h=pruneOld(loadHistory());
+  const keys=Object.keys(h).sort((a,b)=>new Date(b)-new Date(a));
+  // make sure today exists as tab even if empty
+  const today=todayKey();
+  if(!keys.includes(today)) keys.unshift(today);
+
+  const bar=document.getElementById('tabBar');
+  bar.innerHTML='';
+  keys.forEach(k=>{
+    const btn=document.createElement('button');
+    btn.className='tab'+(k===activeTab?' active':'');
+    btn.textContent=getDayLabel(k);
+    btn.onclick=()=>{ activeTab=k; renderTabs(); renderHistList(); };
+    bar.appendChild(btn);
+  });
+  renderHistList();
+}
+
+function renderHistList(){
+  const h=loadHistory();
+  const items=h[activeTab]||[];
+  const listEl=document.getElementById('histList');
+  const title=document.getElementById('histTitle');
+  title.textContent=getDayLabel(activeTab);
+
+  if(!items.length){
+    listEl.innerHTML='<p class="h-empty">ยังไม่มีประวัติ<br>วันนี้ลองคำนวณดูสิ 🧮</p>';
+    return;
+  }
+  listEl.innerHTML=items.map((item,i)=>
+    `<div class="h-item" onclick="useHist('${activeTab}',${i})">
+      <div class="h-expr">${item.expr}</div>
+      <div class="h-result">= ${item.result}</div>
+      <div class="h-time">${item.t}</div>
+    </div>`
+  ).join('');
+}
+
+function useHist(day,i){
+  const h=loadHistory();
+  const item=h[day][i];
+  current=item.result;justCalc=false;
+  exprEl.textContent=item.expr+' =';
+  setActiveOp(null);updateDisplay();
+}
+
+function clearDay(){
+  const h=loadHistory();
+  delete h[activeTab];
+  saveHistory(h);
+  renderTabs();
+  showToast('ล้างประวัติ '+getDayLabel(activeTab)+' แล้ว');
+}
+
+// ── SNAPSHOT ──
+function saveSnapshot(){
+  showToast('กำลังบันทึกภาพ...');
+  const panel=document.getElementById('calc-panel');
+  html2canvas(panel,{
+    scale:2,
+    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#fff',
+    useCORS:true
+  }).then(canvas=>{
+    const link=document.createElement('a');
+    link.download='calculator-'+Date.now()+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    showToast('บันทึกภาพเรียบร้อย ✓');
+  }).catch(()=>showToast('บันทึกไม่สำเร็จ ลองอีกครั้ง'));
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{
+  if(e.key>='0'&&e.key<='9') pressNum(e.key);
+  else if(e.key==='.') pressDot();
+  else if(e.key==='+') pressOp('+');
+  else if(e.key==='-') pressOp('-');
+  else if(e.key==='*') pressOp('*');
+  else if(e.key==='/'){e.preventDefault();pressOp('/');}
+  else if(e.key==='Enter'||e.key==='=') calculate();
+  else if(e.key==='Escape') clearAll();
+  else if(e.key==='Backspace') backspace();
+  else if(e.key==='m'||e.key==='M') memSave();
+});
+
+// ── INIT ──
+memSlots = loadMem();
+renderMem();
+renderTabs();
+</script>
+</body>
+</html>
